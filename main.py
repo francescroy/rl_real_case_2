@@ -23,33 +23,41 @@ NUM_ACTIONS = 5
 
 
 
-ROUND_COUNTER = 0
-TOTAL_ROUND_COUNTER = 0
+ROUND_COUNTER = 0 # in seconds
+TOTAL_ROUND_COUNTER = 0 # in seconds
+TOTAL_PRICE = 0 # in euros
+ID_USER = 0
+
 CPU_TYPE_1 = 1
 CPU_TYPE_2 = 5
-MAX_JBS = 3
+MAX_JBS = 2
+PRICE_JB_S = 0.005
+PRICE_SLA_S = 0.10
+CPU_LOAD_SLA = 70
 
 x = None
 y = None
 y2 = None
-y3 = None
 
 line1 = None
 line2 = None
-line3 = None
 
 fig = None
 axs = None
 
-CYCLE_IN_SECONDS = 3600 # default 3600 (1 hour) or 86400 (1 day)
-PRINT_SCOPE = 300 # default 300 (5 minutes)
+CYCLE_IN_SECONDS = 180 # in seconds
+PRINT_SCOPE = 360 # in seconds
+PHOTO_INTERVAL = 3 # in seconds
 
-DRAW_PLOT= True
+DRAW_PLOT= False
+
+AUTOSCALER_ON= False
+
+
 
 class User:
-    def __init__(self,type_user,duration,id_conf,id):
+    def __init__(self,type_user,duration,id):
         self.id = id
-        self.id_conf = id_conf
         self.type = type_user # 1 o 2, els 1's fan augmentar la cpu un 1% i els 2 un 5%
         self.duration = duration # same for all participants of same conference, in seconds
 
@@ -72,11 +80,15 @@ class JVB:
         return self.up
 
     def add_user(self,user):
-        self.users_connected.append(user)
-        if user.type == 1:
-            self.cpu_load = self.cpu_load + CPU_TYPE_1
-        else:
-            self.cpu_load = self.cpu_load + CPU_TYPE_2
+
+        if self.up:
+            self.users_connected.append(user)
+            if user.type == 1:
+                self.cpu_load = self.cpu_load + CPU_TYPE_1
+            else:
+                self.cpu_load = self.cpu_load + CPU_TYPE_2
+            return 1
+        return 0
 
     def advance_round(self):
         for user in reversed(self.users_connected):
@@ -113,21 +125,8 @@ class Jitsi:
         if self.video_bridges_up < MAX_JBS:
             self.get_some_jvb_down().start()
             self.video_bridges_up += 1
-
-    def get_least_loaded_jvb(self):
-
-        jvb_selected = None
-        cpu_min = 1000
-
-        for jvb in self.video_bridges:
-
-            if jvb.is_up():
-
-                if jvb.cpu_load < cpu_min:
-                    cpu_min = jvb.cpu_load
-                    jvb_selected = jvb
-
-        return jvb_selected
+            return 1
+        return 0
 
     def add_user(self,user):
         jvb_selected = self.get_least_loaded_jvb()
@@ -146,6 +145,8 @@ class Jitsi:
                 self.add_user(user)
 
             self.video_bridges_up -= 1
+            return 1
+        return 0
 
     def advance_round(self):
         for jvb in self.video_bridges:
@@ -165,76 +166,162 @@ class Jitsi:
         state = [self.video_bridges_up,self.get_users_connected()]
 
         for jvb in self.video_bridges:
-            state.append(jvb.cpu_load)
+            state.append(self.get_floor_five(jvb.cpu_load))
 
-        state.append(ROUND_COUNTER) # SI NO?
+        # state.append(ROUND_COUNTER) # Comentar o es dispara el state space...
 
         return state
 
-# File.txt + funcio normal centrada a 0 de: numero conf., numero users, numero duracio, inclus de la round de la connexio?
+    def get_floor_five(self,cpu_load):
 
-# podria tenir una funcio de generar patro distorsionat per normal (a partir de patro fixe) que cridaria a advance_rounds() dins del if...
+        if cpu_load==None:
+            return None
 
-horari = [None] * CYCLE_IN_SECONDS
-horari[10] = [3,5,6,7,300,450,200] # (num de conf, num de users, num de duracio)
-horari[17] = [3,5,6,7,300,450,200]
-horari[40] = [3,5,6,7,300,450,200]
+        while 1:
+            if cpu_load % 5==0:
+                break
+            else:
+                cpu_load = cpu_load-1
+
+        return  cpu_load
+
+    def get_least_loaded_jvb(self):
+
+        jvb_selected = None
+        cpu_min = 1000
+
+        for jvb in self.video_bridges:
+
+            if jvb.is_up():
+
+                if jvb.cpu_load <= cpu_min:
+                    cpu_min = jvb.cpu_load
+                    jvb_selected = jvb
+
+        return jvb_selected
+
+    def get_most_loaded_jvb(self):
+
+        jvb_selected = None
+        cpu_max = 0
+
+        for jvb in self.video_bridges:
+
+            if jvb.is_up():
+
+                if jvb.cpu_load >= cpu_max:
+                    cpu_max = jvb.cpu_load
+                    jvb_selected = jvb
+
+        return jvb_selected
+
+class Autoscaler:
+
+    def __init__(self,jitsi):
+        self.jitsi = jitsi
+
+    def perform_action(self,jitsi_state):
+
+        if self.jitsi.get_most_loaded_jvb().cpu_load > CPU_LOAD_SLA:
+            self.jitsi.start_jvb()
+
+        if self.jitsi.video_bridges[0].is_up():
+            if self.jitsi.video_bridges[1].is_up():
+                if self.jitsi.video_bridges[0].cpu_load + self.jitsi.video_bridges[1].cpu_load <= CPU_LOAD_SLA:
+                    self.jitsi.stop_jvb()
+
+
+
+def add_conference(temps_x,pos_x,tipus_x):
+    # Conf 1.
+    for i in range(tipus_x[0]):
+
+        plus = round(np.random.normal(0, 3, 1)[0])
+
+        if plus > 10 or plus < -10:
+            plus = 0
+
+        pos = pos_x + plus
+        if horari[pos] == None:
+            horari[pos] = [[1, temps_x]]
+        else:
+            horari[pos].append([1, temps_x])
+
+    for i in range(tipus_x[1]):
+
+        plus = round(np.random.normal(0, 3, 1)[0])
+
+        if plus > 10 or plus < -10:
+            plus = 0
+
+        pos = pos_x + plus
+        if horari[pos] == None:
+            horari[pos] = [[2, temps_x]]
+        else:
+            horari[pos].append([2, temps_x])
+
+
+horari = [None] * CYCLE_IN_SECONDS # 180
+
+for num_conf in range(15):
+    temps_x = randint(60, 120)
+    pos_x = randint(15, CYCLE_IN_SECONDS - 15)
+    tipus_x = [5, 1]
+
+    add_conference(temps_x, pos_x, tipus_x)
+
 # Enregistrar aquestes dades de Jitsi realment...
 
 
+def compute_price(jitsi):
+    global TOTAL_PRICE
 
+    TOTAL_PRICE = TOTAL_PRICE + PRICE_JB_S * jitsi.video_bridges_up
+
+    for jvb in jitsi.video_bridges:
+        if jvb.is_up():
+            if jvb.cpu_load>CPU_LOAD_SLA:
+                TOTAL_PRICE = TOTAL_PRICE + (jvb.cpu_load - CPU_LOAD_SLA) * PRICE_SLA_S
 
 def draw_plot(jitsi):
     global x
     global y
     global y2
-    global y3
 
     cpu_1 = jitsi.video_bridges[0].cpu_load
     cpu_2 = jitsi.video_bridges[1].cpu_load
-    cpu_3 = jitsi.video_bridges[2].cpu_load
 
     if cpu_1==None:
         cpu_1 = 0
     if cpu_2==None:
         cpu_2 = 0
-    if cpu_3==None:
-        cpu_3 = 0
 
     x = np.append(x,TOTAL_ROUND_COUNTER)
     y = np.append(y,cpu_1)
     y2 = np.append(y2,cpu_2)
-    y3 = np.append(y3,cpu_3)
 
-    if DRAW_PLOT == True:
+    ini = x.size - PRINT_SCOPE
+    end = x.size
 
-        ini = x.size - PRINT_SCOPE
-        end = x.size
+    # updating the value of x and y
+    line1.set_xdata(x[ini:end:1])
+    line1.set_ydata(y[ini:end:1])
 
-        # updating the value of x and y
-        line1.set_xdata(x[ini:end:1])
-        line1.set_ydata(y[ini:end:1])
+    line2.set_xdata(x[ini:end:1])
+    line2.set_ydata(y2[ini:end:1])
 
-        line2.set_xdata(x[ini:end:1])
-        line2.set_ydata(y2[ini:end:1])
+    # re-drawing the figure
+    fig.canvas.draw()
 
-        line3.set_xdata(x[ini:end:1])
-        line3.set_ydata(y3[ini:end:1])
+    axs[0].set_xlim([x[ini], x[end-1]])
+    axs[1].set_xlim([x[ini], x[end-1]])
 
-        # re-drawing the figure
-        fig.canvas.draw()
+    axs[0].set_ylim([0, 150])
+    axs[1].set_ylim([0, 150])
 
-        axs[0].set_xlim([x[ini], x[end-1]])
-        axs[1].set_xlim([x[ini], x[end-1]])
-        axs[2].set_xlim([x[ini], x[end-1]])
-
-        axs[0].set_ylim([0, 150])
-        axs[1].set_ylim([0, 150])
-        axs[2].set_ylim([0, 150])
-
-        # to flush the GUI events
-        fig.canvas.flush_events()
-        #time.sleep(0.5)
+    # to flush the GUI events
+    fig.canvas.flush_events()
+    #time.sleep(0.5)
 
 def advance_rounds(jitsi,rounds):
     global ROUND_COUNTER
@@ -248,27 +335,38 @@ def advance_rounds(jitsi,rounds):
         ROUND_COUNTER = ROUND_COUNTER + 1
         if ROUND_COUNTER == CYCLE_IN_SECONDS:
             ROUND_COUNTER=0
-            print("Cycle finished")
+            print("Cycle number "+str(TOTAL_ROUND_COUNTER/CYCLE_IN_SECONDS)+" finished")
 
         # Start of next round:
         new_users(jitsi)
-        draw_plot(jitsi)
+        if DRAW_PLOT:
+            draw_plot(jitsi)
+        compute_price(jitsi)
 
 def new_users(jitsi):
+    global ID_USER
     # Read the file...
-    if ROUND_COUNTER==60:
 
-        for i in range(15):
-            jitsi.add_user(User(1,120,1,i))
+    list_of_users_to_connect = horari[ROUND_COUNTER]
+    if list_of_users_to_connect is not None:
+        for con_user in list_of_users_to_connect:
+            jitsi.add_user(User(con_user[0], con_user[1], ID_USER))
 
-        jitsi.add_user(User(2,120,1,15))
+    ID_USER = ID_USER + 1
 
-    if ROUND_COUNTER==80:
+def compute_cost_state(state):
 
-        for i in range(15):
-            jitsi.add_user(User(1,120,2,i))
+    cost = (state[0]*PRICE_JB_S)*PHOTO_INTERVAL
 
-        jitsi.add_user(User(2,120,2,15))
+    for i in range(2,len(state)):
+        if state[i] is not None:
+            if state[i]>CPU_LOAD_SLA:
+                cost = cost + (state[i] - CPU_LOAD_SLA) * PRICE_SLA_S
+
+    return cost
+
+
+
 
 
 
@@ -280,24 +378,18 @@ def new_users(jitsi):
 
 if __name__ == '__main__':
 
-
-    # genrating random data values
-
     x = np.array(list(range(-PRINT_SCOPE, 0)))
     y = np.array([0] * PRINT_SCOPE) # Last minute without action
     y2 = np.array([0] * PRINT_SCOPE) # Last minute without action
-    y3 = np.array([0] * PRINT_SCOPE) # Last minute without action
 
     # enable interactive mode
     plt.ion()
 
-    fig, axs = plt.subplots(3, 1)
+    fig, axs = plt.subplots(2, 1)
     line1, = axs[0].plot(x, y)
     axs[0].set_title('JVB 1')
     line2, = axs[1].plot(x, y2, 'tab:orange')
     axs[1].set_title('JVB 2')
-    line3, = axs[2].plot(x, y3, 'tab:green')
-    axs[2].set_title('JVB 3')
 
     for ax in axs.flat:
         ax.set(xlabel='ROUND', ylabel='CPU load')
@@ -312,32 +404,48 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
+
     jitsi = Jitsi()
+    autoscaler = Autoscaler(jitsi)
 
-    new_users(jitsi) # Important for the 0 round for the first time.
-    draw_plot(jitsi)
-    # print(jitsi.get_state())
+    new_users(jitsi) # Important for the 0 round for the first time. Start of the round.
+    if DRAW_PLOT:
+        draw_plot(jitsi)
+    compute_price(jitsi)
 
-    for i in range(1000000): # INFINITELY...
+    state = jitsi.get_state()
+    if AUTOSCALER_ON:
+        autoscaler.perform_action(state)
 
-        advance_rounds(jitsi, 10)
-        # print(jitsi.get_state())
+    for i in range(100000):
 
-        if TOTAL_ROUND_COUNTER== 70:
-            jitsi.start_jvb()
-        if TOTAL_ROUND_COUNTER== 90:
-            jitsi.stop_jvb()
+        # each PHOTO_INTERVAL seconds we take a "photo":
+        advance_rounds(jitsi, PHOTO_INTERVAL)
+
+        state = jitsi.get_state()
+        if AUTOSCALER_ON:
+            autoscaler.perform_action(state)
+
+
+    print()
+    print(str(round(TOTAL_PRICE,2)) + "€")
+    print()
 
 
 
 
-    # print(jitsi.get_least_loaded_jvb().users_connected[0].duration)
-    # print(jitsi.get_least_loaded_jvb().cpu_load)
+
+
+
+
 
     # Vale pero la foto del sistema la vull fer cada 10 segons... FOTO + ACCIO (*QUE SUPOSARE QUE TE IMPACTE IMMEDIAT*)
     # a next_state = current_state.next_state(action, states) hauré d'avançar 20 iteracions...
 
-    # Seguent pas, fer que es mostrin els tres JVB loads...
     # Seguent pas, fer un autoscaler threshold based?
 
     # Constuir policy seguent pas
