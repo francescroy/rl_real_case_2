@@ -49,9 +49,9 @@ CYCLE_IN_SECONDS = 180 # in seconds
 PRINT_SCOPE = 360 # in seconds
 PHOTO_INTERVAL = 3 # in seconds
 
-DRAW_PLOT= False
+DRAW_PLOT= True
 
-AUTOSCALER_ON= False
+AUTOSCALER_ON= True
 
 
 
@@ -166,24 +166,11 @@ class Jitsi:
         state = [self.video_bridges_up,self.get_users_connected()]
 
         for jvb in self.video_bridges:
-            state.append(self.get_floor_five(jvb.cpu_load))
+            state.append(jvb.cpu_load)
 
         # state.append(ROUND_COUNTER) # Comentar o es dispara el state space...
 
         return state
-
-    def get_floor_five(self,cpu_load):
-
-        if cpu_load==None:
-            return None
-
-        while 1:
-            if cpu_load % 5==0:
-                break
-            else:
-                cpu_load = cpu_load-1
-
-        return  cpu_load
 
     def get_least_loaded_jvb(self):
 
@@ -222,56 +209,48 @@ class Autoscaler:
 
     def perform_action(self,jitsi_state):
 
-        if self.jitsi.get_most_loaded_jvb().cpu_load > CPU_LOAD_SLA:
-            self.jitsi.start_jvb()
+        # [jvb,part,cpu1,cpu2]
 
-        if self.jitsi.video_bridges[0].is_up():
-            if self.jitsi.video_bridges[1].is_up():
-                if self.jitsi.video_bridges[0].cpu_load + self.jitsi.video_bridges[1].cpu_load <= CPU_LOAD_SLA:
+        if jitsi_state[2] is not None:
+            if jitsi_state[2] > CPU_LOAD_SLA:
+                self.jitsi.start_jvb()
+
+        if jitsi_state[3] is not None:
+            if jitsi_state[3] > CPU_LOAD_SLA:
+                self.jitsi.start_jvb()
+
+        if jitsi_state[2] is not None and jitsi_state[3] is not None:
+                if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA:
                     self.jitsi.stop_jvb()
 
+class AutoscalerRL:
+
+    def __init__(self,jitsi,policy):
+        self.jitsi = jitsi
+        self.policy = policy
+
+    def perform_action(self,jitsi_state):
+
+        coordinates = get_coordinates_state(jitsi_state)
+
+        if self.policy[coordinates[0]][coordinates[1]][coordinates[2]][coordinates[3]] == 1:
+            self.jitsi.start_jvb()
+        elif self.policy[coordinates[0]][coordinates[1]][coordinates[2]][coordinates[3]] == -1:
+            self.jitsi.stop_jvb()
 
 
-def add_conference(temps_x,pos_x,tipus_x):
-    # Conf 1.
-    for i in range(tipus_x[0]):
+def get_floor_five(cpu_load):
 
-        plus = round(np.random.normal(0, 3, 1)[0])
+    if cpu_load==None:
+        return None
 
-        if plus > 10 or plus < -10:
-            plus = 0
-
-        pos = pos_x + plus
-        if horari[pos] == None:
-            horari[pos] = [[1, temps_x]]
+    while 1:
+        if cpu_load % 5==0:
+            break
         else:
-            horari[pos].append([1, temps_x])
+            cpu_load = cpu_load-1
 
-    for i in range(tipus_x[1]):
-
-        plus = round(np.random.normal(0, 3, 1)[0])
-
-        if plus > 10 or plus < -10:
-            plus = 0
-
-        pos = pos_x + plus
-        if horari[pos] == None:
-            horari[pos] = [[2, temps_x]]
-        else:
-            horari[pos].append([2, temps_x])
-
-
-horari = [None] * CYCLE_IN_SECONDS # 180
-
-for num_conf in range(15):
-    temps_x = randint(60, 120)
-    pos_x = randint(15, CYCLE_IN_SECONDS - 15)
-    tipus_x = [5, 1]
-
-    add_conference(temps_x, pos_x, tipus_x)
-
-# Enregistrar aquestes dades de Jitsi realment...
-
+    return cpu_load
 
 def compute_price(jitsi):
     global TOTAL_PRICE
@@ -365,18 +344,72 @@ def compute_cost_state(state):
 
     return cost
 
+def add_conference(temps_x,pos_x,tipus_x):
+    # Conf 1.
+    for i in range(tipus_x[0]):
+
+        plus = round(np.random.normal(0, 3, 1)[0])
+
+        if plus > 10 or plus < -10:
+            plus = 0
+
+        pos = pos_x + plus
+        if horari[pos] == None:
+            horari[pos] = [[1, temps_x]]
+        else:
+            horari[pos].append([1, temps_x])
+
+    for i in range(tipus_x[1]):
+
+        plus = round(np.random.normal(0, 3, 1)[0])
+
+        if plus > 10 or plus < -10:
+            plus = 0
+
+        pos = pos_x + plus
+        if horari[pos] == None:
+            horari[pos] = [[2, temps_x]]
+        else:
+            horari[pos].append([2, temps_x])
+
+def get_coordinates_state(jitsi_state):
+    coordernada_x = jitsi_state[0] - 1
+    coordernada_y = jitsi_state[1]
+    coordernada_z = None
+    coordernada_a = None
+
+    if jitsi_state[2] == None:
+        coordernada_z = 0
+    else:
+        coordernada_z = int(get_floor_five(jitsi_state[2]) / 5 + 1)
+
+    if jitsi_state[3] == None:
+        coordernada_a = 0
+    else:
+        coordernada_a = int(get_floor_five(jitsi_state[3]) / 5 + 1)
+
+    return [coordernada_x,coordernada_y,coordernada_z,coordernada_a]
 
 
 
+horari = [None] * CYCLE_IN_SECONDS # 180
+
+for num_conf in range(15):
+
+    # temps_x = randint(60, 120)
+    temps_x = round(np.random.normal(120, 10, 1)[0])
+    if temps_x < 100 or temps_x > 140:
+        temps_x = 120
+    pos_x = randint(10, CYCLE_IN_SECONDS - 10 - 1)
+    tipus_x = [5, 1]
+
+    add_conference(temps_x, pos_x, tipus_x)
+
+# Enregistrar aquestes dades de Jitsi realment...
 
 
 
-
-
-
-
-
-if __name__ == '__main__':
+def main2():
 
     x = np.array(list(range(-PRINT_SCOPE, 0)))
     y = np.array([0] * PRINT_SCOPE) # Last minute without action
@@ -404,36 +437,63 @@ if __name__ == '__main__':
 
 
 
+    print("What do you want to do?:")
+    option_selected = input()
 
+    if option_selected == "1":
 
+        jitsi = Jitsi()
+        autoscaler = Autoscaler(jitsi)
 
-
-
-    jitsi = Jitsi()
-    autoscaler = Autoscaler(jitsi)
-
-    new_users(jitsi) # Important for the 0 round for the first time. Start of the round.
-    if DRAW_PLOT:
-        draw_plot(jitsi)
-    compute_price(jitsi)
-
-    state = jitsi.get_state()
-    if AUTOSCALER_ON:
-        autoscaler.perform_action(state)
-
-    for i in range(100000):
-
-        # each PHOTO_INTERVAL seconds we take a "photo":
-        advance_rounds(jitsi, PHOTO_INTERVAL)
+        new_users(jitsi) # Important for the 0 round for the first time. Start of the round.
+        if DRAW_PLOT:
+            draw_plot(jitsi)
+        compute_price(jitsi)
 
         state = jitsi.get_state()
         if AUTOSCALER_ON:
             autoscaler.perform_action(state)
 
+        for i in range(100000):
 
-    print()
-    print(str(round(TOTAL_PRICE,2)) + "€")
-    print()
+            # each PHOTO_INTERVAL seconds we take a "photo":
+            advance_rounds(jitsi, PHOTO_INTERVAL)
+
+            state = jitsi.get_state()
+            if AUTOSCALER_ON:
+                autoscaler.perform_action(state)
+
+
+        print()
+        print(str(round(TOTAL_PRICE,2)) + "€")
+        print()
+
+    elif option_selected == "2":
+
+        policy_actual = np.zeros((2, 91, 32, 32))
+        jitsi = Jitsi()
+        autoscaler = AutoscalerRL(jitsi,policy_actual)
+
+        coordinates = get_coordinates_state([2,90,149,150])
+
+        # Valors frontera a state:
+        # 1,2
+        # 0,..,90
+        # None,0,..150
+        # None,0,..150
+
+        print(coordinates)
+        print(policy_actual[coordinates[0]][coordinates[1]][coordinates[2]][coordinates[3]])
+
+        # Un estat seria algo com [1,15,43,None]
+        # V_policy_actual(s) = un valor
+        # V_policy_actual = dimensio de policy?
+
+        #ALPHA = 0.001  # Which is the right value? After 50% of iteration decay... after 80% decay... LEARNING RATE...
+        #current_state = get_random_state(states)
+        #Q = np.zeros((3, 2, 91, 31, 31))
+
+
 
 
 
@@ -874,5 +934,5 @@ def main():
     # It would be nice to undestand why DP policy evaluation algo. works... is because you are using bootstrapping...
     # It's much easier to understand MC policy evaluation algo. works... it relies on sampling, not on bootstrapping...
 
-#if __name__ == '__main__':
-    #main()
+if __name__ == '__main__':
+    main2()
