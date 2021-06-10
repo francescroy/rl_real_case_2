@@ -16,6 +16,11 @@ a[0][12][13][0] = +1 # aixo és l'accio per quan estem a l'estat 1 jvb, 12 users
 print(a[1][40][20][20])
 
 
+number= 36
+number_decimal = float(number)/5
+number_rounded = round(number_decimal)
+number_final = int(number_rounded*5)
+print(number_final)
 
 
 
