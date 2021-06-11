@@ -31,8 +31,8 @@ ID_USER = 0
 CPU_TYPE_1 = 1
 CPU_TYPE_2 = 5
 MAX_JBS = 2
-PRICE_JB_S = 25
-PRICE_SLA_S = 5
+PRICE_JB_S = 0.000025
+PRICE_SLA_S = 0.000005
 CPU_LOAD_SLA = 80
 
 x = None
@@ -49,7 +49,7 @@ CYCLE_IN_SECONDS = 180 # in seconds
 PRINT_SCOPE = 360 # in seconds
 PHOTO_INTERVAL = 3 # in seconds
 
-DRAW_PLOT= True
+DRAW_PLOT= False
 
 AUTOSCALER_ON= True
 
@@ -166,12 +166,11 @@ class Jitsi:
 
     def get_state(self):
 
-        state = [self.video_bridges_up,self.get_users_connected()]
+        #state = [self.video_bridges_up,self.get_users_connected()] # O un o l'altre sinó es dispara el num.
+        state = [self.video_bridges_up, ROUND_COUNTER]
 
         for jvb in self.video_bridges:
             state.append(jvb.cpu_load)
-
-        # state.append(ROUND_COUNTER) # Comentar o es dispara el state space...
 
         return state
 
@@ -215,6 +214,25 @@ class Autoscaler:
         # [jvb,part,cpu1,cpu2] jitsi_state
 
         if jitsi_state[2] is not None:
+            if jitsi_state[2] +10 > CPU_LOAD_SLA:
+                self.jitsi.start_jvb()
+
+        if jitsi_state[3] is not None:
+            if jitsi_state[3] + 10> CPU_LOAD_SLA:
+                self.jitsi.start_jvb()
+
+        if jitsi_state[2] is not None and jitsi_state[3] is not None:
+            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA:
+                if jitsi_state[2]<20:
+                    self.jitsi.stop_jvb()
+                elif jitsi_state[3]<20:
+                    self.jitsi.stop_jvb()
+
+    def perform_action_tonta(self,jitsi_state):
+
+        # [jvb,part,cpu1,cpu2] jitsi_state
+
+        if jitsi_state[2] is not None:
             if jitsi_state[2] > CPU_LOAD_SLA:
                 self.jitsi.start_jvb()
 
@@ -238,8 +256,11 @@ class AutoscalerRL:
 
         if self.policy[coordinates[0]][coordinates[1]][coordinates[2]][coordinates[3]] == 1:
             self.jitsi.start_jvb()
+            return 1
         elif self.policy[coordinates[0]][coordinates[1]][coordinates[2]][coordinates[3]] == -1:
             self.jitsi.stop_jvb()
+            return -1
+        return 0
 
     def set_policy(self,policy):
         self.policy= policy
@@ -323,7 +344,8 @@ def test_autoscaler(type_autoscaler,policy):
     elif type_autoscaler==4:
         autoscaler = NoAutoscaler(jitsi)
 
-    for i in range(100000):
+    a_week = 24*7*3600/PHOTO_INTERVAL
+    for i in range(int(a_week)): # 1 WEEK...
 
         # each PHOTO_INTERVAL seconds we take a "photo":
         advance_rounds(jitsi, PHOTO_INTERVAL)
@@ -400,16 +422,18 @@ def get_closest(number,to):
 
 def compute_cost_state(state):
 
-    cost = (state[0]*PRICE_JB_S)
+    cost = (state[0]*PRICE_JB_S) * PHOTO_INTERVAL
 
     for i in range(2,len(state)):
         if state[i] is not None:
             if state[i]>CPU_LOAD_SLA:
-                cost = cost + (state[i]-CPU_LOAD_SLA)*PRICE_SLA_S
+                cost = cost + (state[i]-CPU_LOAD_SLA)*PRICE_SLA_S * PHOTO_INTERVAL
 
     return cost
 
 def get_coordinates_state(jitsi_state):
+    # Un estat seria algo com [1,171,93,None]
+
     coordernada_x = jitsi_state[0] - 1
     coordernada_y = int(get_closest(jitsi_state[1],10) / 10)
     coordernada_z = None
@@ -475,9 +499,9 @@ def max_a_2(Q,state):
 
     return best_q
 
-def get_action_from_policy(policy,state):
-    coordinates = get_coordinates_state(state)
-    return policy[coordinates[0]][coordinates[1]][coordinates[2]][coordinates[3]]
+
+
+
 
 
 def add_conference(temps_x,pos_x,tipus_x):
@@ -582,7 +606,7 @@ def main2():
         ID_USER = 0
 
         #"""
-        policy_actual = np.zeros((2, 10, 17, 17)) # 17 = 16 + None.
+        policy_actual = np.zeros((2, 19, 17, 17)) # 17 = 16 + None.
         #"""
 
         jitsi = Jitsi()
@@ -600,25 +624,24 @@ def main2():
         # Q_policy_actual = mes gran que la dimensio de la policy  
 
         #"""
-        ALPHA = 0.001  # Which is the right value? After 50% of iteration decay... after 80% decay... LEARNING RATE...
+        ALPHA = 0.1  # Which is the right value? After 50% of iteration decay... after 80% decay... LEARNING RATE...
+        print("ALPHA: "+str(ALPHA))
         current_state = jitsi.get_state()
-        Q = np.zeros((3, 2, 10, 17, 17))
+        Q = np.zeros((3, 2, 19, 17, 17))
 
         EPSILON = 1.00
-        number_of_iterations = 10000000
-        DECAYING_EPSILON = 1.0/number_of_iterations
+        number_of_iterations = 1000000
+        print("ITERATIONS: "+str(number_of_iterations))
+        if number_of_iterations != 0:
+            DECAYING_EPSILON = 1.0/number_of_iterations
         #"""
-                                                   ##############3 3###########################3 3##############
-
-
 
         for t in range(number_of_iterations):
 
             print_wait_info(t, number_of_iterations)
 
-            action = get_action_from_policy(policy_actual, current_state)
-            if AUTOSCALER_ON:
-                autoscaler.perform_action(current_state)
+            # (s,a,r,s')
+            action = autoscaler.perform_action(current_state)
             advance_rounds(jitsi, PHOTO_INTERVAL)
             next_state = jitsi.get_state()
             reward = compute_cost_state(current_state) - compute_cost_state(next_state) # afegir cost si obres o tanques?
@@ -627,7 +650,8 @@ def main2():
             Q_t_minus_1 = Q[get_num_action_2(action)][coor[0]][coor[1]][coor[2]][coor[3]]
 
             if t%(number_of_iterations/10)== 0 and t!=0:
-                ALPHA= ALPHA/2
+                #ALPHA= ALPHA/2
+                pass
 
             Q[get_num_action_2(action)][coor[0]][coor[1]][coor[2]][coor[3]] = Q_t_minus_1 + ALPHA * (reward + GAMMA * max_a_2(Q, next_state) - Q_t_minus_1)
 
