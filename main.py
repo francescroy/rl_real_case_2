@@ -31,8 +31,8 @@ ID_USER = 0
 CPU_TYPE_1 = 1
 CPU_TYPE_2 = 5
 MAX_JBS = 2
-PRICE_JB_S = 0.000025
-PRICE_SLA_S = 0.000005
+PRICE_JB_S = 0.0025
+PRICE_SLA_S = 0.0005
 CPU_LOAD_SLA = 80
 
 x = None
@@ -50,11 +50,15 @@ PRINT_SCOPE = 360 # in seconds
 PHOTO_INTERVAL = 3 # in seconds
 
 DRAW_PLOT= False
-
 AUTOSCALER_ON= True
 
 horari = [None] * CYCLE_IN_SECONDS
 INICI_CONF=[20,20,20,30,30,30,40,40,40,50,50,50,60,60,60]
+#INICI_CONF=[20,20,20,20,20,20,20,40,40,40,40,40,40,40,40]
+#INICI_CONF=[20,30,40,50,60,70,80,90,100,110,120,130,140,150,160]
+
+QUANTIZATION_TIME = 5
+QUANTIZATION_CPU = 10
 
 
 
@@ -251,7 +255,7 @@ class AutoscalerRL:
         self.policy = policy
 
     def perform_action(self,jitsi_state):
-
+        # It returns the action as well
         coordinates = get_coordinates_state(jitsi_state)
 
         if self.policy[coordinates[0]][coordinates[1]][coordinates[2]][coordinates[3]] == 1:
@@ -355,7 +359,7 @@ def test_autoscaler(type_autoscaler,policy):
             autoscaler.perform_action(state)
 
     print()
-    print(str(round(TOTAL_PRICE, 2)) + "€")
+    print(str(round(TOTAL_PRICE/100, 2)) + "€")
     print()
 
 def draw_plot(jitsi):
@@ -435,19 +439,19 @@ def get_coordinates_state(jitsi_state):
     # Un estat seria algo com [1,171,93,None]
 
     coordernada_x = jitsi_state[0] - 1
-    coordernada_y = int(get_closest(jitsi_state[1],10) / 10)
+    coordernada_y = int(get_closest(jitsi_state[1],QUANTIZATION_TIME) / QUANTIZATION_TIME)
     coordernada_z = None
     coordernada_a = None
 
     if jitsi_state[2] == None:
         coordernada_z = 0
     else:
-        coordernada_z = int(get_closest(jitsi_state[2],10) / 10 + 1)
+        coordernada_z = int(get_closest(jitsi_state[2],QUANTIZATION_CPU) / QUANTIZATION_CPU + 1)
 
     if jitsi_state[3] == None:
         coordernada_a = 0
     else:
-        coordernada_a = int(get_closest(jitsi_state[3],10) / 10 + 1)
+        coordernada_a = int(get_closest(jitsi_state[3],QUANTIZATION_CPU) / QUANTIZATION_CPU + 1)
 
     return [coordernada_x,coordernada_y,coordernada_z,coordernada_a]
 
@@ -606,7 +610,14 @@ def main2():
         ID_USER = 0
 
         #"""
-        policy_actual = np.zeros((2, 19, 17, 17)) # 17 = 16 + None.
+        volum_dimensio_number_jitsi = MAX_JBS
+        volum_dimensio_temps = int(CYCLE_IN_SECONDS / QUANTIZATION_TIME + 1)
+        volum_dimensio_cpu = int(150 / QUANTIZATION_CPU + 2)
+
+        print("Q.time: " + str(QUANTIZATION_TIME))
+        print("Q.cpu: " + str(QUANTIZATION_CPU))
+
+        policy_actual = np.zeros((volum_dimensio_number_jitsi, volum_dimensio_temps, volum_dimensio_cpu, volum_dimensio_cpu))
         #"""
 
         jitsi = Jitsi()
@@ -627,10 +638,10 @@ def main2():
         ALPHA = 0.1  # Which is the right value? After 50% of iteration decay... after 80% decay... LEARNING RATE...
         print("ALPHA: "+str(ALPHA))
         current_state = jitsi.get_state()
-        Q = np.zeros((3, 2, 19, 17, 17))
+        Q = np.zeros((3, volum_dimensio_number_jitsi, volum_dimensio_temps, volum_dimensio_cpu, volum_dimensio_cpu))
 
         EPSILON = 1.00
-        number_of_iterations = 1000000
+        number_of_iterations = 3000000
         print("ITERATIONS: "+str(number_of_iterations))
         if number_of_iterations != 0:
             DECAYING_EPSILON = 1.0/number_of_iterations
@@ -644,7 +655,7 @@ def main2():
             action = autoscaler.perform_action(current_state)
             advance_rounds(jitsi, PHOTO_INTERVAL)
             next_state = jitsi.get_state()
-            reward = compute_cost_state(current_state) - compute_cost_state(next_state) # afegir cost si obres o tanques?
+            reward = compute_cost_state(current_state) - compute_cost_state(next_state) # afegir cost si obres o tanques? R(s,a,s')
 
             coor = get_coordinates_state(current_state)
             Q_t_minus_1 = Q[get_num_action_2(action)][coor[0]][coor[1]][coor[2]][coor[3]]
