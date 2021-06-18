@@ -23,4 +23,39 @@ number_final = int(number_rounded*5)
 print(number_final)
 
 
+# importing package
+import matplotlib.pyplot as plt
+import numpy as np
+
+fig, ax = plt.subplots()
+
+ax.set(xlabel='Rounds', ylabel='Price(€)',title='Learning rate = 0.1')
+
+# create data
+x =  [25000,50000,100000,200000,1000000]
+y1 = [28.1,28.1,28.1,28.1,28.1]
+y2 = [33.75,33.75,33.75,33.75,33.75]
+y3 = [37.21,33.47,26.95,26.02,25.32]
+y4 = [56.94,46.38,37.05,31.00,26.93]
+
+# plot lines
+ax.plot(x, y1, label = "Threshold 1", linestyle="-")
+ax.plot(x, y2, label = "Threshold 2", linestyle="--")
+ax.plot(x, y3, label = "Rl 1", linestyle="-.")
+ax.plot(x, y4, label = "Rl 2", linestyle=":")
+
+
+plt.legend()
+plt.show()
+
+
+fig.savefig("test.png")
+
+
+
+
+
+
+
+
 

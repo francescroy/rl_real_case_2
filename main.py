@@ -31,8 +31,8 @@ ID_USER = 0
 CPU_TYPE_1 = 1
 CPU_TYPE_2 = 5
 MAX_JBS = 2
-PRICE_JB_S = 0.0025
-PRICE_SLA_S = 0.0005
+PRICE_JB_S = 0.000025 # 0.09$ la hora
+PRICE_SLA_S = 0.0025 # 9$ la hora
 CPU_LOAD_SLA = 80
 
 x = None
@@ -57,8 +57,11 @@ INICI_CONF=[20,20,20,30,30,30,40,40,40,50,50,50,60,60,60]
 #INICI_CONF=[20,20,20,20,20,20,20,40,40,40,40,40,40,40,40]
 #INICI_CONF=[20,30,40,50,60,70,80,90,100,110,120,130,140,150,160]
 
-QUANTIZATION_TIME = 5
-QUANTIZATION_CPU = 10
+QUANTIZATION_TIME = 20
+QUANTIZATION_CPU = 25
+
+NUM_EXP = 10
+TOTAL = 0
 
 
 
@@ -218,19 +221,16 @@ class Autoscaler:
         # [jvb,part,cpu1,cpu2] jitsi_state
 
         if jitsi_state[2] is not None:
-            if jitsi_state[2] +10 > CPU_LOAD_SLA:
+            if jitsi_state[2] +5 > CPU_LOAD_SLA:
                 self.jitsi.start_jvb()
 
         if jitsi_state[3] is not None:
-            if jitsi_state[3] + 10> CPU_LOAD_SLA:
+            if jitsi_state[3] + 5> CPU_LOAD_SLA:
                 self.jitsi.start_jvb()
 
         if jitsi_state[2] is not None and jitsi_state[3] is not None:
-            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA:
-                if jitsi_state[2]<20:
-                    self.jitsi.stop_jvb()
-                elif jitsi_state[3]<20:
-                    self.jitsi.stop_jvb()
+            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA -5:
+                self.jitsi.stop_jvb()
 
     def perform_action_tonta(self,jitsi_state):
 
@@ -294,7 +294,7 @@ def compute_price(jitsi):
     for jvb in jitsi.video_bridges:
         if jvb.is_up():
             if jvb.cpu_load>CPU_LOAD_SLA:
-                TOTAL_PRICE = TOTAL_PRICE + PRICE_SLA_S * (jvb.cpu_load - CPU_LOAD_SLA)
+                TOTAL_PRICE = TOTAL_PRICE + PRICE_SLA_S * (1 + (jvb.cpu_load - CPU_LOAD_SLA)/CPU_LOAD_SLA)
 
 def advance_rounds(jitsi,rounds):
     global ROUND_COUNTER
@@ -329,7 +329,7 @@ def new_users(jitsi):
 
 def test_autoscaler(type_autoscaler,policy):
 
-    global ROUND_COUNTER, TOTAL_ROUND_COUNTER, TOTAL_PRICE, ID_USER
+    global ROUND_COUNTER, TOTAL_ROUND_COUNTER, TOTAL_PRICE, ID_USER, TOTAL
 
     ROUND_COUNTER = 0  # in seconds
     TOTAL_ROUND_COUNTER = 0  # in seconds
@@ -359,7 +359,9 @@ def test_autoscaler(type_autoscaler,policy):
             autoscaler.perform_action(state)
 
     print()
-    print(str(round(TOTAL_PRICE/100, 2)) + "€")
+    print(str(round(TOTAL_PRICE, 2)) + "€")
+    if type_autoscaler==3:
+        TOTAL = TOTAL + round(TOTAL_PRICE, 2)
     print()
 
 def draw_plot(jitsi):
@@ -424,16 +426,16 @@ def get_closest(number,to):
     return number
     """
 
-def compute_cost_state(state):
+def compute_reward_state(state):
 
     cost = (state[0]*PRICE_JB_S) * PHOTO_INTERVAL
 
     for i in range(2,len(state)):
         if state[i] is not None:
             if state[i]>CPU_LOAD_SLA:
-                cost = cost + (state[i]-CPU_LOAD_SLA)*PRICE_SLA_S * PHOTO_INTERVAL
+                cost = cost + (1 + (state[i]-CPU_LOAD_SLA)/CPU_LOAD_SLA)*PRICE_SLA_S * PHOTO_INTERVAL
 
-    return cost
+    return - cost
 
 def get_coordinates_state(jitsi_state):
     # Un estat seria algo com [1,171,93,None]
@@ -594,104 +596,104 @@ def main2():
     print("What do you want to do?:")
     option_selected = input()
 
-    if option_selected == "1":
+    for num_experiments in range(NUM_EXP):
 
-        test_autoscaler(1, None)
+        print("##########################################")
+        print("##########################################")
+        print("EXPERIMENT NUMBER " + str(num_experiments))
+        print("##########################################")
+        print("##########################################")
 
-    if option_selected == "1":
+        if option_selected == "1":
 
-        test_autoscaler(2, None)
+            test_autoscaler(1, None)
 
-    if option_selected == "1":
+        if option_selected == "1":
 
-        ROUND_COUNTER = 0  # in seconds
-        TOTAL_ROUND_COUNTER = 0  # in seconds
-        TOTAL_PRICE = 0  # in euros
-        ID_USER = 0
+            test_autoscaler(2, None)
 
-        #"""
-        volum_dimensio_number_jitsi = MAX_JBS
-        volum_dimensio_temps = int(CYCLE_IN_SECONDS / QUANTIZATION_TIME + 1)
-        volum_dimensio_cpu = int(150 / QUANTIZATION_CPU + 2)
+        if option_selected == "1":
 
-        print("Q.time: " + str(QUANTIZATION_TIME))
-        print("Q.cpu: " + str(QUANTIZATION_CPU))
+            ROUND_COUNTER = 0  # in seconds
+            TOTAL_ROUND_COUNTER = 0  # in seconds
+            TOTAL_PRICE = 0  # in euros
+            ID_USER = 0
 
-        policy_actual = np.zeros((volum_dimensio_number_jitsi, volum_dimensio_temps, volum_dimensio_cpu, volum_dimensio_cpu))
-        #"""
+            #"""
+            volum_dimensio_number_jitsi = MAX_JBS
+            volum_dimensio_temps = int(CYCLE_IN_SECONDS / QUANTIZATION_TIME + 1)
+            volum_dimensio_cpu = int(150 / QUANTIZATION_CPU + 2)
 
-        jitsi = Jitsi()
-        autoscaler = AutoscalerRL(jitsi,policy_actual)
+            print("Q.time: " + str(QUANTIZATION_TIME))
+            print("Q.cpu: " + str(QUANTIZATION_CPU))
 
-        # Valors frontera a state:
-        # 1,2
-        # 0,..,90
-        # None,0,..150
-        # None,0,..150
+            policy_actual = np.zeros((volum_dimensio_number_jitsi, volum_dimensio_temps, volum_dimensio_cpu, volum_dimensio_cpu))
+            #"""
 
-        # Un estat seria algo com [1,15,43,None]
-        # V_policy_actual(s) = un valor
-        # V_policy_actual = dimensio de policy? Si
-        # Q_policy_actual = mes gran que la dimensio de la policy  
+            jitsi = Jitsi()
+            autoscaler = AutoscalerRL(jitsi,policy_actual)
 
-        #"""
-        ALPHA = 0.1  # Which is the right value? After 50% of iteration decay... after 80% decay... LEARNING RATE...
-        print("ALPHA: "+str(ALPHA))
-        current_state = jitsi.get_state()
-        Q = np.zeros((3, volum_dimensio_number_jitsi, volum_dimensio_temps, volum_dimensio_cpu, volum_dimensio_cpu))
+            # Un estat seria algo com [1,15,43,None]
+            # V_policy_actual(s) = un valor
+            # V_policy_actual = dimensio de policy? Si
+            # Q_policy_actual = mes gran que la dimensio de la policy
 
-        EPSILON = 1.00
-        number_of_iterations = 3000000
-        print("ITERATIONS: "+str(number_of_iterations))
-        if number_of_iterations != 0:
-            DECAYING_EPSILON = 1.0/number_of_iterations
-        #"""
+            #"""
+            ALPHA = 0.05  # Which is the right value? After 50% of iteration decay... after 80% decay... LEARNING RATE...
+            print("ALPHA: "+str(ALPHA))
+            current_state = jitsi.get_state()
+            Q = np.zeros((3, volum_dimensio_number_jitsi, volum_dimensio_temps, volum_dimensio_cpu, volum_dimensio_cpu))
 
-        for t in range(number_of_iterations):
+            EPSILON = 1.00
+            number_of_iterations = 5000000
+            print("ITERATIONS: "+str(number_of_iterations))
+            if number_of_iterations != 0:
+                DECAYING_EPSILON = 1.0/number_of_iterations
+            #"""
 
-            print_wait_info(t, number_of_iterations)
+            for t in range(number_of_iterations):
 
-            # (s,a,r,s')
-            action = autoscaler.perform_action(current_state)
-            advance_rounds(jitsi, PHOTO_INTERVAL)
-            next_state = jitsi.get_state()
-            reward = compute_cost_state(current_state) - compute_cost_state(next_state) # afegir cost si obres o tanques? R(s,a,s')
+                print_wait_info(t, number_of_iterations)
 
-            coor = get_coordinates_state(current_state)
-            Q_t_minus_1 = Q[get_num_action_2(action)][coor[0]][coor[1]][coor[2]][coor[3]]
+                # (s,a,r,s')
+                action = autoscaler.perform_action(current_state)
+                advance_rounds(jitsi, PHOTO_INTERVAL)
+                next_state = jitsi.get_state()
+                reward = compute_reward_state(current_state) #- compute_cost_state(next_state) # afegir cost si obres o tanques? R(s,a,s')
 
-            if t%(number_of_iterations/10)== 0 and t!=0:
-                #ALPHA= ALPHA/2
-                pass
+                coor = get_coordinates_state(current_state)
+                Q_t_minus_1 = Q[get_num_action_2(action)][coor[0]][coor[1]][coor[2]][coor[3]]
 
-            Q[get_num_action_2(action)][coor[0]][coor[1]][coor[2]][coor[3]] = Q_t_minus_1 + ALPHA * (reward + GAMMA * max_a_2(Q, next_state) - Q_t_minus_1)
+                #if t%(number_of_iterations/10)== 0 and t!=0:
+                    #ALPHA= ALPHA/2
 
-            policy_actual[coor[0]][coor[1]][coor[2]][coor[3]] = argmax_a_2(Q, current_state)
-            random_int = randint(0, 99)
-            if random_int < int(EPSILON * 100):
-                policy_actual[coor[0]][coor[1]][coor[2]][coor[3]] = get_action_2(randint(0, 2))
+                Q[get_num_action_2(action)][coor[0]][coor[1]][coor[2]][coor[3]] = Q_t_minus_1 + ALPHA * (reward + GAMMA * max_a_2(Q, next_state) - Q_t_minus_1)
 
-            autoscaler.set_policy(policy_actual)
+                policy_actual[coor[0]][coor[1]][coor[2]][coor[3]] = argmax_a_2(Q, current_state)
+                random_int = randint(0, 99)
+                if random_int < int(EPSILON * 100):
+                    policy_actual[coor[0]][coor[1]][coor[2]][coor[3]] = get_action_2(randint(0, 2))
 
-            EPSILON = EPSILON - DECAYING_EPSILON
+                autoscaler.set_policy(policy_actual)
 
-            current_state = next_state
+                EPSILON = EPSILON - DECAYING_EPSILON
 
-
-
+                current_state = next_state
 
 
 
-        if True:
-
-            test_autoscaler(3,policy_actual)
-
-    if option_selected == "1":
-
-        test_autoscaler(4, None)         
 
 
 
+            if True:
+
+                test_autoscaler(3,policy_actual)
+
+        if option_selected == "1":
+
+            test_autoscaler(4, None)
+
+    print(TOTAL / NUM_EXP)
 
 
 
