@@ -21,8 +21,6 @@ COST_STEP = 0.10
 NUM_ACTIONS = 5
 
 
-
-
 ROUND_COUNTER = 0 # in seconds
 TOTAL_ROUND_COUNTER = 0 # in seconds
 TOTAL_PRICE = 0 # in euros
@@ -31,7 +29,7 @@ ID_USER = 0
 CPU_TYPE_1 = 1
 CPU_TYPE_2 = 5
 MAX_JBS = 2
-PRICE_JB_S = 0.000025 # 0.09$ la hora
+PRICE_JB_S = 0.000025 # 0.09$ la hora (based on real Amazon EC2...)
 PRICE_SLA_S = 0.0025 # 9$ la hora
 CPU_LOAD_SLA = 80
 
@@ -47,7 +45,7 @@ axs = None
 
 CYCLE_IN_SECONDS = 180 # in seconds
 PRINT_SCOPE = 360 # in seconds
-PHOTO_INTERVAL = 3 # in seconds
+PHOTO_INTERVAL = 5 # in seconds
 
 DRAW_PLOT= False
 AUTOSCALER_ON= True
@@ -57,8 +55,8 @@ INICI_CONF=[20,20,20,30,30,30,40,40,40,50,50,50,60,60,60]
 #INICI_CONF=[20,20,20,20,20,20,20,40,40,40,40,40,40,40,40]
 #INICI_CONF=[20,30,40,50,60,70,80,90,100,110,120,130,140,150,160]
 
-QUANTIZATION_TIME = 20
-QUANTIZATION_CPU = 25
+QUANTIZATION_TIME = 10
+QUANTIZATION_CPU = 10
 
 NUM_EXP = 10
 TOTAL = 0
@@ -221,31 +219,99 @@ class Autoscaler:
         # [jvb,part,cpu1,cpu2] jitsi_state
 
         if jitsi_state[2] is not None:
-            if jitsi_state[2] +5 > CPU_LOAD_SLA:
+            if jitsi_state[2] +25 > CPU_LOAD_SLA:
                 self.jitsi.start_jvb()
 
         if jitsi_state[3] is not None:
-            if jitsi_state[3] + 5> CPU_LOAD_SLA:
+            if jitsi_state[3] + 25> CPU_LOAD_SLA:
                 self.jitsi.start_jvb()
 
         if jitsi_state[2] is not None and jitsi_state[3] is not None:
-            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA -5:
+            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA -25:
                 self.jitsi.stop_jvb()
 
-    def perform_action_tonta(self,jitsi_state):
+class Autoscaler2:
+
+    def __init__(self,jitsi):
+        self.jitsi = jitsi
+
+    def perform_action(self,jitsi_state):
 
         # [jvb,part,cpu1,cpu2] jitsi_state
 
         if jitsi_state[2] is not None:
-            if jitsi_state[2] > CPU_LOAD_SLA:
+            if jitsi_state[2] +30 > CPU_LOAD_SLA:
                 self.jitsi.start_jvb()
 
         if jitsi_state[3] is not None:
-            if jitsi_state[3] > CPU_LOAD_SLA:
+            if jitsi_state[3] + 30> CPU_LOAD_SLA:
                 self.jitsi.start_jvb()
 
         if jitsi_state[2] is not None and jitsi_state[3] is not None:
-            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA:
+            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA -30:
+                self.jitsi.stop_jvb()
+
+class Autoscaler3:
+
+    def __init__(self,jitsi):
+        self.jitsi = jitsi
+
+    def perform_action(self,jitsi_state):
+
+        # [jvb,part,cpu1,cpu2] jitsi_state
+
+        if jitsi_state[2] is not None:
+            if jitsi_state[2] + 35 > CPU_LOAD_SLA:
+                self.jitsi.start_jvb()
+
+        if jitsi_state[3] is not None:
+            if jitsi_state[3] + 35 > CPU_LOAD_SLA:
+                self.jitsi.start_jvb()
+
+        if jitsi_state[2] is not None and jitsi_state[3] is not None:
+            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA - 35:
+                self.jitsi.stop_jvb()
+
+class Autoscaler4:
+
+    def __init__(self,jitsi):
+        self.jitsi = jitsi
+
+    def perform_action(self,jitsi_state):
+
+        # [jvb,part,cpu1,cpu2] jitsi_state
+
+        if jitsi_state[2] is not None:
+            if jitsi_state[2] + 40 > CPU_LOAD_SLA:
+                self.jitsi.start_jvb()
+
+        if jitsi_state[3] is not None:
+            if jitsi_state[3] + 40 > CPU_LOAD_SLA:
+                self.jitsi.start_jvb()
+
+        if jitsi_state[2] is not None and jitsi_state[3] is not None:
+            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA - 40:
+                self.jitsi.stop_jvb()
+
+class Autoscaler5:
+
+    def __init__(self,jitsi):
+        self.jitsi = jitsi
+
+    def perform_action(self,jitsi_state):
+
+        # [jvb,part,cpu1,cpu2] jitsi_state
+
+        if jitsi_state[2] is not None:
+            if jitsi_state[2] + 45 > CPU_LOAD_SLA:
+                self.jitsi.start_jvb()
+
+        if jitsi_state[3] is not None:
+            if jitsi_state[3] + 45 > CPU_LOAD_SLA:
+                self.jitsi.start_jvb()
+
+        if jitsi_state[2] is not None and jitsi_state[3] is not None:
+            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA - 45:
                 self.jitsi.stop_jvb()
 
 class AutoscalerRL:
@@ -269,14 +335,6 @@ class AutoscalerRL:
     def set_policy(self,policy):
         self.policy= policy
 
-class FakeAutoscaler:
-
-    def __init__(self,jitsi):
-        self.jitsi = jitsi
-
-    def perform_action(self,jitsi_state):
-        self.jitsi.start_jvb()
-
 class NoAutoscaler:
     def __init__(self,jitsi):
         self.jitsi = jitsi
@@ -293,7 +351,7 @@ def compute_price(jitsi):
 
     for jvb in jitsi.video_bridges:
         if jvb.is_up():
-            if jvb.cpu_load>CPU_LOAD_SLA:
+            if jvb.cpu_load>=CPU_LOAD_SLA:
                 TOTAL_PRICE = TOTAL_PRICE + PRICE_SLA_S * (1 + (jvb.cpu_load - CPU_LOAD_SLA)/CPU_LOAD_SLA)
 
 def advance_rounds(jitsi,rounds):
@@ -342,11 +400,17 @@ def test_autoscaler(type_autoscaler,policy):
     if type_autoscaler==1:
         autoscaler = Autoscaler(jitsi)
     elif type_autoscaler==2:
-        autoscaler = FakeAutoscaler(jitsi)
+        autoscaler = Autoscaler2(jitsi)
     elif type_autoscaler==3:
-        autoscaler = AutoscalerRL(jitsi,policy)
+        autoscaler = Autoscaler3(jitsi)
     elif type_autoscaler==4:
+        autoscaler = Autoscaler4(jitsi)
+    elif type_autoscaler==5:
+        autoscaler = Autoscaler5(jitsi)
+    elif type_autoscaler==6:
         autoscaler = NoAutoscaler(jitsi)
+    elif type_autoscaler==7:
+        autoscaler = AutoscalerRL(jitsi,policy)
 
     a_week = 24*7*3600/PHOTO_INTERVAL
     for i in range(int(a_week)): # 1 WEEK...
@@ -360,7 +424,7 @@ def test_autoscaler(type_autoscaler,policy):
 
     print()
     print(str(round(TOTAL_PRICE, 2)) + "€")
-    if type_autoscaler==3:
+    if type_autoscaler==7:
         TOTAL = TOTAL + round(TOTAL_PRICE, 2)
     print()
 
@@ -432,7 +496,7 @@ def compute_reward_state(state):
 
     for i in range(2,len(state)):
         if state[i] is not None:
-            if state[i]>CPU_LOAD_SLA:
+            if state[i]>=CPU_LOAD_SLA:
                 cost = cost + (1 + (state[i]-CPU_LOAD_SLA)/CPU_LOAD_SLA)*PRICE_SLA_S * PHOTO_INTERVAL
 
     return - cost
@@ -614,6 +678,22 @@ def main2():
 
         if option_selected == "1":
 
+            test_autoscaler(3, None)
+
+        if option_selected == "1":
+
+            test_autoscaler(4, None)
+
+        if option_selected == "1":
+
+            test_autoscaler(5, None)
+
+        if option_selected == "1":
+
+            test_autoscaler(6, None)
+
+        if option_selected == "1":
+
             ROUND_COUNTER = 0  # in seconds
             TOTAL_ROUND_COUNTER = 0  # in seconds
             TOTAL_PRICE = 0  # in euros
@@ -639,13 +719,13 @@ def main2():
             # Q_policy_actual = mes gran que la dimensio de la policy
 
             #"""
-            ALPHA = 0.05  # Which is the right value? After 50% of iteration decay... after 80% decay... LEARNING RATE...
+            ALPHA = 0.1  # Which is the right value? After 50% of iteration decay... after 80% decay... LEARNING RATE...
             print("ALPHA: "+str(ALPHA))
             current_state = jitsi.get_state()
             Q = np.zeros((3, volum_dimensio_number_jitsi, volum_dimensio_temps, volum_dimensio_cpu, volum_dimensio_cpu))
 
             EPSILON = 1.00
-            number_of_iterations = 5000000
+            number_of_iterations = 4000000
             print("ITERATIONS: "+str(number_of_iterations))
             if number_of_iterations != 0:
                 DECAYING_EPSILON = 1.0/number_of_iterations
@@ -687,11 +767,10 @@ def main2():
 
             if True:
 
-                test_autoscaler(3,policy_actual)
+                test_autoscaler(7,policy_actual)
 
-        if option_selected == "1":
 
-            test_autoscaler(4, None)
+
 
     print(TOTAL / NUM_EXP)
 
