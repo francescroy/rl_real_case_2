@@ -43,24 +43,35 @@ line2 = None
 fig = None
 axs = None
 
-CYCLE_IN_SECONDS = 180 # in seconds
+CYCLE_IN_SECONDS = 86400 # in seconds (180 or 86400 default)
 PRINT_SCOPE = 360 # in seconds
-PHOTO_INTERVAL = 5 # in seconds
+PHOTO_INTERVAL = 5 # in seconds (5 default)
 
 DRAW_PLOT= False
 AUTOSCALER_ON= True
 
 horari = [None] * CYCLE_IN_SECONDS
-INICI_CONF=[20,20,20,30,30,30,40,40,40,50,50,50,60,60,60]
+#INICI_CONF=[20,20,20,30,30,30,40,40,40,50,50,50,60,60,60]
 #INICI_CONF=[20,20,20,20,20,20,20,40,40,40,40,40,40,40,40]
 #INICI_CONF=[20,30,40,50,60,70,80,90,100,110,120,130,140,150,160]
+#...
+INICI_CONF=[]
 
-QUANTIZATION_TIME = 10
-QUANTIZATION_CPU = 10
+for ind in range(int(CYCLE_IN_SECONDS/180)):
+    basic_list = [20,20,20,30,30,30,40,40,40,50,50,50,60,60,60]
+
+    list_modified = [(z + 180*ind) for z in basic_list]
+
+    INICI_CONF = INICI_CONF + list_modified
+
+
+QUANTIZATION_TIME = 10 # default 10
+QUANTIZATION_CPU = 10 # default 10
 
 NUM_EXP = 10
 TOTAL = 0
 
+RL_TYPE = 1
 
 
 class User:
@@ -110,6 +121,12 @@ class JVB:
 
 class Jitsi:
     def __init__(self):
+
+        self.cpu1_1 = None
+        self.cpu1_2 = None
+        self.cpu2_1 = None
+        self.cpu2_2 = None
+
         self.video_bridges = []
         for i in range(MAX_JBS):
             self.video_bridges.append(JVB())
@@ -148,11 +165,11 @@ class Jitsi:
             jvb_selected = self.get_least_loaded_jvb()
             users_to_reallocate = jvb_selected.users_connected
             jvb_selected.close()
+            self.video_bridges_up -= 1
 
             for user in users_to_reallocate:
                 self.add_user(user)
 
-            self.video_bridges_up -= 1
             return 1
         return 0
 
@@ -171,11 +188,17 @@ class Jitsi:
 
     def get_state(self):
 
-        #state = [self.video_bridges_up,self.get_users_connected()] # O un o l'altre sinó es dispara el num.
-        state = [self.video_bridges_up, ROUND_COUNTER]
+        state=None
 
-        for jvb in self.video_bridges:
-            state.append(jvb.cpu_load)
+        if RL_TYPE==1:
+
+            state = [self.video_bridges_up, ROUND_COUNTER]
+
+            for jvb in self.video_bridges:
+                state.append(jvb.cpu_load)
+
+        else:
+            pass
 
         return state
 
@@ -608,7 +631,7 @@ def populate_timetable():
     horari = [None] * CYCLE_IN_SECONDS
     # MAXIM QUE PUGUI CARREGAR 150! 15*6 = 90 users
     # Enregistrar aquestes dades de Jitsi realment...
-    for num_conf in range(15):
+    for num_conf in range(15*(int(CYCLE_IN_SECONDS/180))):
 
         # temps_x = randint(60, 120)
         temps_x = round(np.random.normal(120, 10, 1)[0])
@@ -725,7 +748,7 @@ def main2():
             Q = np.zeros((3, volum_dimensio_number_jitsi, volum_dimensio_temps, volum_dimensio_cpu, volum_dimensio_cpu))
 
             EPSILON = 1.00
-            number_of_iterations = 4000000
+            number_of_iterations = 8000000
             print("ITERATIONS: "+str(number_of_iterations))
             if number_of_iterations != 0:
                 DECAYING_EPSILON = 1.0/number_of_iterations
@@ -739,13 +762,13 @@ def main2():
                 action = autoscaler.perform_action(current_state)
                 advance_rounds(jitsi, PHOTO_INTERVAL)
                 next_state = jitsi.get_state()
-                reward = compute_reward_state(current_state) #- compute_cost_state(next_state) # afegir cost si obres o tanques? R(s,a,s')
+                reward = compute_reward_state(current_state) # afegir cost si obres o tanques? R(s,a,s')
 
                 coor = get_coordinates_state(current_state)
                 Q_t_minus_1 = Q[get_num_action_2(action)][coor[0]][coor[1]][coor[2]][coor[3]]
 
                 #if t%(number_of_iterations/10)== 0 and t!=0:
-                    #ALPHA= ALPHA/2
+                #    ALPHA= ALPHA/2
 
                 Q[get_num_action_2(action)][coor[0]][coor[1]][coor[2]][coor[3]] = Q_t_minus_1 + ALPHA * (reward + GAMMA * max_a_2(Q, next_state) - Q_t_minus_1)
 
@@ -781,7 +804,6 @@ def main2():
 
 
     # Vale pero la foto del sistema la vull fer cada 10 segons... FOTO + ACCIO (*QUE SUPOSARE QUE TE IMPACTE IMMEDIAT*)
-    # a next_state = current_state.next_state(action, states) hauré d'avançar 20 iteracions...
 
 
 

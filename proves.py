@@ -29,20 +29,29 @@ import numpy as np
 
 fig, ax = plt.subplots()
 
-ax.set(xlabel='Rounds', ylabel='Price(€)',title='Learning rate = 0.1')
+ax.set(xlabel='Trainning rounds', ylabel='Price after a week(€)',title='Learning rate = 0.1')
 
 # create data
-x =  [25000,50000,100000,200000,1000000]
-y1 = [28.1,28.1,28.1,28.1,28.1]
-y2 = [33.75,33.75,33.75,33.75,33.75]
-y3 = [37.21,33.47,26.95,26.02,25.32]
-y4 = [56.94,46.38,37.05,31.00,26.93]
+x =  [500000,1000000,2000000,4000000]
+
+
+y2 = [27.13, 27.13, 27.13, 27.13]
+y3 = [26.78, 26.78, 26.78, 26.78]
+y4 = [27.06, 27.06, 27.06, 27.06]
+
+y_rl = [29.47,27.44,26.25,26.19]
+
+y_rl_2 = [27.84,26.90,26.80,26.80]
 
 # plot lines
-ax.plot(x, y1, label = "Threshold 1", linestyle="-")
-ax.plot(x, y2, label = "Threshold 2", linestyle="--")
-ax.plot(x, y3, label = "Rl 1", linestyle="-.")
-ax.plot(x, y4, label = "Rl 2", linestyle=":")
+
+ax.plot(x, y2, label = "Threshold 1", linestyle=":")
+ax.plot(x, y3, label = "Threshold 2", linestyle=":")
+ax.plot(x, y4, label = "Threshold 3", linestyle=":")
+
+ax.plot(x, y_rl, label = "RL", linestyle="-")
+
+#ax.plot(x, y_rl_2, label = "Rl 2", linestyle="-")
 
 
 plt.legend()
