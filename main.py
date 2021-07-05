@@ -20,7 +20,6 @@ OPTIMAL_FINAL_STATE = False # Can be false if using TD-learning or DP methods bu
 COST_STEP = 0.10
 NUM_ACTIONS = 5
 
-
 ROUND_COUNTER = 0 # in seconds
 TOTAL_ROUND_COUNTER = 0 # in seconds
 TOTAL_PRICE = 0 # in euros
@@ -33,45 +32,23 @@ PRICE_JB_S = 0.000025 # 0.09$ la hora (based on real Amazon EC2...)
 PRICE_SLA_S = 0.0025 # 9$ la hora
 CPU_LOAD_SLA = 80
 
-x = None
-y = None
-y2 = None
-
-line1 = None
-line2 = None
-
-fig = None
-axs = None
-
-CYCLE_IN_SECONDS = 86400 # in seconds (180 or 86400 default)
-PRINT_SCOPE = 360 # in seconds
+CYCLE_IN_SECONDS = int(sys.argv[1]) # in seconds (180 or 86400 or 1800 default (MULTIPLE OF 180))
 PHOTO_INTERVAL = 5 # in seconds (5 default)
+DURACIO_VID = 120 # in seconds
+DURACIO_VID_MIN = 100
+DURACIO_VID_MAX = 140
 
-DRAW_PLOT= False
-AUTOSCALER_ON= True
+horari = [None] * CYCLE_IN_SECONDS # es regenera a cada cycle
 
-horari = [None] * CYCLE_IN_SECONDS
-#INICI_CONF=[20,20,20,30,30,30,40,40,40,50,50,50,60,60,60]
-#INICI_CONF=[20,20,20,20,20,20,20,40,40,40,40,40,40,40,40]
-#INICI_CONF=[20,30,40,50,60,70,80,90,100,110,120,130,140,150,160]
-#...
 INICI_CONF=[]
 
-for ind in range(int(CYCLE_IN_SECONDS/180)):
-    basic_list = [20,20,20,30,30,30,40,40,40,50,50,50,60,60,60]
-
-    list_modified = [(z + 180*ind) for z in basic_list]
-
-    INICI_CONF = INICI_CONF + list_modified
-
+## OMPLIR INICI_CONF!!!!!!
 
 QUANTIZATION_TIME = 10 # default 10
 QUANTIZATION_CPU = 10 # default 10
 
 NUM_EXP = 10
-TOTAL = 0
-
-RL_TYPE = 1
+TOTAL_EXP = 0
 
 
 class User:
@@ -121,11 +98,6 @@ class JVB:
 
 class Jitsi:
     def __init__(self):
-
-        self.cpu1_1 = None
-        self.cpu1_2 = None
-        self.cpu2_1 = None
-        self.cpu2_2 = None
 
         self.video_bridges = []
         for i in range(MAX_JBS):
@@ -190,15 +162,10 @@ class Jitsi:
 
         state=None
 
-        if RL_TYPE==1:
+        state = [self.video_bridges_up, ROUND_COUNTER]
 
-            state = [self.video_bridges_up, ROUND_COUNTER]
-
-            for jvb in self.video_bridges:
-                state.append(jvb.cpu_load)
-
-        else:
-            pass
+        for jvb in self.video_bridges:
+            state.append(jvb.cpu_load)
 
         return state
 
@@ -234,107 +201,24 @@ class Jitsi:
 
 class Autoscaler:
 
-    def __init__(self,jitsi):
+    def __init__(self,jitsi,threshold):
         self.jitsi = jitsi
+        self.threshold = threshold
 
     def perform_action(self,jitsi_state):
 
         # [jvb,part,cpu1,cpu2] jitsi_state
 
         if jitsi_state[2] is not None:
-            if jitsi_state[2] +25 > CPU_LOAD_SLA:
+            if jitsi_state[2] + self.threshold > CPU_LOAD_SLA:
                 self.jitsi.start_jvb()
 
         if jitsi_state[3] is not None:
-            if jitsi_state[3] + 25> CPU_LOAD_SLA:
+            if jitsi_state[3] + self.threshold > CPU_LOAD_SLA:
                 self.jitsi.start_jvb()
 
         if jitsi_state[2] is not None and jitsi_state[3] is not None:
-            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA -25:
-                self.jitsi.stop_jvb()
-
-class Autoscaler2:
-
-    def __init__(self,jitsi):
-        self.jitsi = jitsi
-
-    def perform_action(self,jitsi_state):
-
-        # [jvb,part,cpu1,cpu2] jitsi_state
-
-        if jitsi_state[2] is not None:
-            if jitsi_state[2] +30 > CPU_LOAD_SLA:
-                self.jitsi.start_jvb()
-
-        if jitsi_state[3] is not None:
-            if jitsi_state[3] + 30> CPU_LOAD_SLA:
-                self.jitsi.start_jvb()
-
-        if jitsi_state[2] is not None and jitsi_state[3] is not None:
-            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA -30:
-                self.jitsi.stop_jvb()
-
-class Autoscaler3:
-
-    def __init__(self,jitsi):
-        self.jitsi = jitsi
-
-    def perform_action(self,jitsi_state):
-
-        # [jvb,part,cpu1,cpu2] jitsi_state
-
-        if jitsi_state[2] is not None:
-            if jitsi_state[2] + 35 > CPU_LOAD_SLA:
-                self.jitsi.start_jvb()
-
-        if jitsi_state[3] is not None:
-            if jitsi_state[3] + 35 > CPU_LOAD_SLA:
-                self.jitsi.start_jvb()
-
-        if jitsi_state[2] is not None and jitsi_state[3] is not None:
-            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA - 35:
-                self.jitsi.stop_jvb()
-
-class Autoscaler4:
-
-    def __init__(self,jitsi):
-        self.jitsi = jitsi
-
-    def perform_action(self,jitsi_state):
-
-        # [jvb,part,cpu1,cpu2] jitsi_state
-
-        if jitsi_state[2] is not None:
-            if jitsi_state[2] + 40 > CPU_LOAD_SLA:
-                self.jitsi.start_jvb()
-
-        if jitsi_state[3] is not None:
-            if jitsi_state[3] + 40 > CPU_LOAD_SLA:
-                self.jitsi.start_jvb()
-
-        if jitsi_state[2] is not None and jitsi_state[3] is not None:
-            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA - 40:
-                self.jitsi.stop_jvb()
-
-class Autoscaler5:
-
-    def __init__(self,jitsi):
-        self.jitsi = jitsi
-
-    def perform_action(self,jitsi_state):
-
-        # [jvb,part,cpu1,cpu2] jitsi_state
-
-        if jitsi_state[2] is not None:
-            if jitsi_state[2] + 45 > CPU_LOAD_SLA:
-                self.jitsi.start_jvb()
-
-        if jitsi_state[3] is not None:
-            if jitsi_state[3] + 45 > CPU_LOAD_SLA:
-                self.jitsi.start_jvb()
-
-        if jitsi_state[2] is not None and jitsi_state[3] is not None:
-            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA - 45:
+            if jitsi_state[2] + jitsi_state[3] <= CPU_LOAD_SLA - self.threshold:
                 self.jitsi.stop_jvb()
 
 class AutoscalerRL:
@@ -385,8 +269,6 @@ def advance_rounds(jitsi,rounds):
 
         # Start of the round:
         new_users(jitsi)
-        if DRAW_PLOT:
-            draw_plot(jitsi)
         compute_price(jitsi)
 
         # End of the round:
@@ -410,29 +292,35 @@ def new_users(jitsi):
 
 def test_autoscaler(type_autoscaler,policy):
 
-    global ROUND_COUNTER, TOTAL_ROUND_COUNTER, TOTAL_PRICE, ID_USER, TOTAL
+    global ROUND_COUNTER, TOTAL_ROUND_COUNTER, TOTAL_PRICE, ID_USER, TOTAL_EXP
 
     ROUND_COUNTER = 0  # in seconds
     TOTAL_ROUND_COUNTER = 0  # in seconds
     TOTAL_PRICE = 0  # in euros
     ID_USER = 0
 
+    populate_timetable()
+
     jitsi = Jitsi()
     autoscaler = None
 
     if type_autoscaler==1:
-        autoscaler = Autoscaler(jitsi)
+        autoscaler = Autoscaler(jitsi,10)
     elif type_autoscaler==2:
-        autoscaler = Autoscaler2(jitsi)
+        autoscaler = Autoscaler(jitsi,15)
     elif type_autoscaler==3:
-        autoscaler = Autoscaler3(jitsi)
+        autoscaler = Autoscaler(jitsi,20)
     elif type_autoscaler==4:
-        autoscaler = Autoscaler4(jitsi)
+        autoscaler = Autoscaler(jitsi,25)
     elif type_autoscaler==5:
-        autoscaler = Autoscaler5(jitsi)
+        autoscaler = Autoscaler(jitsi,30)
     elif type_autoscaler==6:
-        autoscaler = NoAutoscaler(jitsi)
+        autoscaler = Autoscaler(jitsi,35)
     elif type_autoscaler==7:
+        autoscaler = Autoscaler(jitsi,40)
+    elif type_autoscaler==8:
+        autoscaler = NoAutoscaler(jitsi)
+    elif type_autoscaler==9:
         autoscaler = AutoscalerRL(jitsi,policy)
 
     a_week = 24*7*3600/PHOTO_INTERVAL
@@ -442,53 +330,15 @@ def test_autoscaler(type_autoscaler,policy):
         advance_rounds(jitsi, PHOTO_INTERVAL)
 
         state = jitsi.get_state()
-        if AUTOSCALER_ON:
-            autoscaler.perform_action(state)
+        autoscaler.perform_action(state)
 
     print()
-    print(str(round(TOTAL_PRICE, 2)) + "€")
-    if type_autoscaler==7:
-        TOTAL = TOTAL + round(TOTAL_PRICE, 2)
+    print(str(round(TOTAL_PRICE, 2)) + " Euros")
+    if type_autoscaler==9:
+        TOTAL_EXP = TOTAL_EXP + round(TOTAL_PRICE, 2)
     print()
 
-def draw_plot(jitsi):
-    global x,y,y2
-    global fig, axs, line1, line2
 
-    cpu_1 = jitsi.video_bridges[0].cpu_load
-    cpu_2 = jitsi.video_bridges[1].cpu_load
-
-    if cpu_1==None:
-        cpu_1 = 0
-    if cpu_2==None:
-        cpu_2 = 0
-
-    x = np.append(x,TOTAL_ROUND_COUNTER)
-    y = np.append(y,cpu_1)
-    y2 = np.append(y2,cpu_2)
-
-    ini = x.size - PRINT_SCOPE
-    end = x.size
-
-    # updating the value of x and y
-    line1.set_xdata(x[ini:end:1])
-    line1.set_ydata(y[ini:end:1])
-
-    line2.set_xdata(x[ini:end:1])
-    line2.set_ydata(y2[ini:end:1])
-
-    # re-drawing the figure
-    fig.canvas.draw()
-
-    axs[0].set_xlim([x[ini], x[end-1]])
-    axs[1].set_xlim([x[ini], x[end-1]])
-
-    axs[0].set_ylim([0, 160])
-    axs[1].set_ylim([0, 160])
-
-    # to flush the GUI events
-    fig.canvas.flush_events()
-    #time.sleep(0.5)
 
 
 
@@ -606,7 +456,7 @@ def add_conference(temps_x,pos_x,tipus_x):
         if plus > 10 or plus < -10:
             plus = 0
 
-        pos = pos_x + plus
+        pos = int(pos_x + plus)
         if horari[pos] == None:
             horari[pos] = [[1, temps_x]]
         else:
@@ -619,7 +469,7 @@ def add_conference(temps_x,pos_x,tipus_x):
         if plus > 10 or plus < -10:
             plus = 0
 
-        pos = pos_x + plus
+        pos = int(pos_x + plus)
         if horari[pos] == None:
             horari[pos] = [[2, temps_x]]
         else:
@@ -631,14 +481,13 @@ def populate_timetable():
     horari = [None] * CYCLE_IN_SECONDS
     # MAXIM QUE PUGUI CARREGAR 150! 15*6 = 90 users
     # Enregistrar aquestes dades de Jitsi realment...
-    for num_conf in range(15*(int(CYCLE_IN_SECONDS/180))):
-
+    for pos_conf in INICI_CONF:
         # temps_x = randint(60, 120)
-        temps_x = round(np.random.normal(120, 10, 1)[0])
-        if temps_x < 100 or temps_x > 140:
-            temps_x = 120
+        temps_x = round(np.random.normal(DURACIO_VID, 10, 1)[0])
+        if temps_x < DURACIO_VID_MIN or temps_x > DURACIO_VID_MAX:
+            temps_x = DURACIO_VID
         #pos_x = randint(15, CYCLE_IN_SECONDS - 15 - 1)
-        pos_x = INICI_CONF[num_conf]
+        pos_x = pos_conf
         tipus_x = [5, 1] # 5 de tipus 1 i 1 de tipus 2 = 6
 
         add_conference(temps_x, pos_x, tipus_x)
@@ -648,40 +497,11 @@ def populate_timetable():
 
 
 def main2():
-    global x,y,y2
-    global fig,axs,line1,line2
+
     global ROUND_COUNTER, TOTAL_ROUND_COUNTER, TOTAL_PRICE, ID_USER
 
-    populate_timetable()
-
-    x = np.array(list(range(-PRINT_SCOPE, 0)))
-    y = np.array([0] * PRINT_SCOPE) # Last minute without action
-    y2 = np.array([0] * PRINT_SCOPE) # Last minute without action
-
-    # enable interactive mode
-    plt.ion()
-
-    fig, axs = plt.subplots(2, 1)
-    line1, = axs[0].plot(x, y)
-    axs[0].set_title('JVB 1')
-    line2, = axs[1].plot(x, y2, 'tab:orange')
-    axs[1].set_title('JVB 2')
-
-    for ax in axs.flat:
-        ax.set(xlabel='ROUND', ylabel='CPU load')
-
-    # Hide x labels and tick labels for top plots and y ticks for right plots.
-    for ax in axs.flat:
-        ax.label_outer()
-
-
-
-
-
-
-
     print("What do you want to do?:")
-    option_selected = input()
+    option_selected = "1"
 
     for num_experiments in range(NUM_EXP):
 
@@ -717,10 +537,20 @@ def main2():
 
         if option_selected == "1":
 
+            test_autoscaler(7, None)
+
+        if option_selected == "1":
+
+            test_autoscaler(8, None)
+
+        if option_selected == "1":
+
             ROUND_COUNTER = 0  # in seconds
             TOTAL_ROUND_COUNTER = 0  # in seconds
             TOTAL_PRICE = 0  # in euros
             ID_USER = 0
+
+            populate_timetable()
 
             #"""
             volum_dimensio_number_jitsi = MAX_JBS
@@ -748,10 +578,12 @@ def main2():
             Q = np.zeros((3, volum_dimensio_number_jitsi, volum_dimensio_temps, volum_dimensio_cpu, volum_dimensio_cpu))
 
             EPSILON = 1.00
-            number_of_iterations = 8000000
+            number_of_iterations = int(sys.argv[2])
             print("ITERATIONS: "+str(number_of_iterations))
             if number_of_iterations != 0:
                 DECAYING_EPSILON = 1.0/number_of_iterations
+
+            print("CYCLE: "+ str(CYCLE_IN_SECONDS))
             #"""
 
             for t in range(number_of_iterations):
@@ -790,12 +622,12 @@ def main2():
 
             if True:
 
-                test_autoscaler(7,policy_actual)
+                test_autoscaler(9,policy_actual)
 
 
 
 
-    print(TOTAL / NUM_EXP)
+    print(TOTAL_EXP / NUM_EXP)
 
 
 
