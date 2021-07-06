@@ -32,17 +32,36 @@ PRICE_JB_S = 0.000025 # 0.09$ la hora (based on real Amazon EC2...)
 PRICE_SLA_S = 0.0025 # 9$ la hora
 CPU_LOAD_SLA = 80
 
-CYCLE_IN_SECONDS = int(sys.argv[1]) # in seconds (180 or 86400 or 1800 default (MULTIPLE OF 180))
+CYCLE_IN_SECONDS = int(sys.argv[1]) # in seconds (360, 1800,...)
 PHOTO_INTERVAL = 5 # in seconds (5 default)
 DURACIO_VID = 120 # in seconds
-DURACIO_VID_MIN = 100
-DURACIO_VID_MAX = 140
+DURACIO_VID_MIN = 110
+DURACIO_VID_MAX = 130
 
 horari = [None] * CYCLE_IN_SECONDS # es regenera a cada cycle
 
-INICI_CONF=[]
+# random numbers [15,30] (per patró 1):
+random_numbers = [29, 24, 17, 21, 19, 29, 28, 25, 20, 30, 17, 18, 23, 21, 28, 16, 26, 19, 29, 26, 26, 23, 22, 21, 26, 26, 16, 17, 29, 27, 27, 25, 23, 17, 24, 27, 16, 16, 29, 21, 27, 26, 22, 27, 26, 17, 20, 23, 15, 19, 22, 27, 23, 24, 20, 21, 16, 15, 17, 24, 30, 24, 30, 25, 15, 17, 19, 20, 25, 16, 17, 18, 18, 24, 15, 15, 26, 29, 16, 24, 24, 29, 17, 18, 29, 20, 25, 19, 18, 17, 16, 28, 15, 18, 26, 20, 20, 29, 24, 23, 29, 16, 15, 29, 30, 29, 16, 20, 15, 17, 18, 16, 22, 27, 19, 27, 20, 27, 21, 16, 16, 16, 22, 17, 26, 29, 25, 19, 29, 23, 22, 29, 27, 15, 30, 28, 30, 22, 17, 28, 28, 27, 28, 21, 21, 24, 19, 30, 30, 27, 19, 25, 30, 21, 23, 26, 20, 18, 21, 20, 17, 30, 18, 15, 20, 19, 21, 18, 15, 28, 25, 30, 22, 28, 29, 16, 15, 22, 26, 28, 25, 27, 18, 21, 15, 16, 23, 19, 29, 25, 22, 15, 24, 30, 16, 16, 22, 19, 28, 17, 28, 20, 25, 16, 20, 28, 20, 22, 25, 20, 20, 29, 27, 23, 17, 15, 29, 27, 29, 15, 26, 15, 30, 30, 26, 18, 24, 24, 19, 20, 20, 17, 25, 23, 16, 15, 16, 24, 30, 15, 27, 23, 18, 18, 18, 25, 29, 30, 19, 23, 18, 15, 30, 30, 20, 24, 19, 22, 18, 15, 16, 24, 15, 22, 29, 21, 18, 29, 18, 17, 30, 25, 20, 24, 30, 16, 23, 24, 22, 19, 28, 27, 26, 22, 16, 25, 24, 18, 23, 22, 23, 23, 18, 30, 22, 30, 23, 15, 27, 24, 18, 23, 20, 15, 22, 28, 26, 23, 26, 27, 19, 22, 30, 18, 20, 28, 20, 24, 20, 17, 16, 23, 25, 21, 21, 18, 23, 21, 30, 15, 17, 23, 21, 24, 16, 26, 18, 23, 27, 16, 18, 23, 15, 26, 23, 24, 21, 26, 19, 29, 17, 23, 22, 18, 18, 21, 30, 20, 27, 20, 22, 19, 23, 30, 17, 25, 29, 30, 30, 18, 24, 18, 28, 17, 25, 26, 23, 17, 26, 15, 24, 30, 20, 17, 26, 27, 15, 24, 24, 26, 29, 27, 21, 30, 17, 22, 16, 23, 17, 23]
 
-## OMPLIR INICI_CONF!!!!!!
+INICI_CONF=[] # fixe per tota la simulacio, de llargaria numero de videoconf. en un cycle (i amb valors de 0 a CYCLE_IN_SECONDS?)
+for index_i in range(15): # 15 videoconf.
+
+    index_pos_conf = random_numbers.pop()
+    index_pos_primera = index_pos_conf
+    INICI_CONF.append(index_pos_conf)
+
+    while True:
+        random_int = random_numbers.pop()
+        index_pos_conf = index_pos_conf + DURACIO_VID_MAX + random_int
+
+        if index_pos_conf > CYCLE_IN_SECONDS + index_pos_primera - DURACIO_VID_MAX :
+            print (INICI_CONF)
+            break
+
+        INICI_CONF.append(index_pos_conf)
+
+
+
 
 QUANTIZATION_TIME = 10 # default 10
 QUANTIZATION_CPU = 10 # default 10
@@ -305,19 +324,19 @@ def test_autoscaler(type_autoscaler,policy):
     autoscaler = None
 
     if type_autoscaler==1:
-        autoscaler = Autoscaler(jitsi,10)
+        autoscaler = Autoscaler(jitsi,45) 
     elif type_autoscaler==2:
-        autoscaler = Autoscaler(jitsi,15)
+        autoscaler = Autoscaler(jitsi,50)
     elif type_autoscaler==3:
-        autoscaler = Autoscaler(jitsi,20)
+        autoscaler = Autoscaler(jitsi,55)
     elif type_autoscaler==4:
-        autoscaler = Autoscaler(jitsi,25)
+        autoscaler = Autoscaler(jitsi,60)
     elif type_autoscaler==5:
-        autoscaler = Autoscaler(jitsi,30)
+        autoscaler = Autoscaler(jitsi,65)
     elif type_autoscaler==6:
-        autoscaler = Autoscaler(jitsi,35)
+        autoscaler = Autoscaler(jitsi,70)
     elif type_autoscaler==7:
-        autoscaler = Autoscaler(jitsi,40)
+        autoscaler = Autoscaler(jitsi,75)
     elif type_autoscaler==8:
         autoscaler = NoAutoscaler(jitsi)
     elif type_autoscaler==9:

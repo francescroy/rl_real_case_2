@@ -72,10 +72,12 @@ plt.show()
 fig.savefig("test.png")
 
 
+from random import *
+list_rand=[]
+for ind in range(4000):
+    list_rand.append(randint(15, 20))
 
-
-
-
+print (list_rand)
 
 
 
