@@ -23,59 +23,100 @@ number_final = int(number_rounded*5)
 print(number_final)
 
 
+
+
+
+
+
+
+
+
+
+
 # importing package
 import matplotlib.pyplot as plt
 import numpy as np
 
 fig, ax = plt.subplots()
 
-ax.set(xlabel='Trainning rounds', ylabel='Price after a week(€)',title='Learning rate = 0.1')
+ax.set(xlabel='Trainning rounds', ylabel='Price after a week(€)',title='Learning rate = 0.05')
 
 # create data
-#x =  [500000,1000000,2000000,4000000]
-x =  [16000000,24000000,32000000,40000000,48000000,56000000,64000000,72000000,80000000,88000000,96000000,104000000,112000000,120000000]
+x = [100000,200000,300000,500000,800000,1000000,2000000]
+x_b = [500000,1000000,2000000,4000000,6000000]
+x_c = [500000,1000000,2000000,4000000]
+
+y1 = [40.75, 40.75, 40.75, 40.75, 40.75, 40.75, 40.75]
+y2 = [39.23, 39.23, 39.23, 39.23, 39.23, 39.23, 39.23]
+y3 = [37.71, 37.71, 37.71, 37.71, 37.71, 37.71, 37.71]
+y4 = [36.17, 36.17, 36.17, 36.17, 36.17, 36.17, 36.17]
+
+y1_b = [44.75, 44.75, 44.75, 44.75, 44.75]
+y2_b = [40.84, 40.84, 40.84, 40.84, 40.84]
+y3_b = [43.79, 43.79, 43.79, 43.79, 43.79]
+y4_b = [37.28, 37.28, 37.28, 37.28, 37.28]
+
+y1_c = [773.52, 773.52, 773.52, 773.52]
+y2_c = [770.63, 770.63, 770.63, 770.63]
+y3_c = [782.96, 782.96, 782.96, 782.96]
+y4_c = [780.91, 780.91, 780.91, 780.91]
 
 
-y2 = [27.13, 27.13, 27.13, 27.13, 27.13, 27.13, 27.13, 27.13, 27.13, 27.13, 27.13, 27.13, 27.13, 27.13]
-y3 = [26.78, 26.78, 26.78, 26.78, 26.78, 26.78, 26.78, 26.78, 26.78, 26.78, 26.78, 26.78, 26.78, 26.78]
-y4 = [27.06, 27.06, 27.06, 27.06, 27.06, 27.06, 27.06, 27.06, 27.06, 27.06, 27.06, 27.06, 27.06, 27.06]
+y_rl = [46.71,42.93,38.00,34.47,31.73,31.68,31.75]
 
-y_rl = [29.47,27.44,26.25,26.19]
+y_rl_b = [48.71,44.77,36.07,31.63,31.42]
 
-y_rl_2 = [90.80,62.22,48.68,43.35,42.84,37.77,38.84,35.12,34.54,35.02,33.85,32.05,31.05,30.05]
+y_rl_c = [801.59,765.42,763.36,762.36]
 
-y_rl_3 = [31.56,29.94,28.25,28.18,27.62,26.84,27.08, 26.53, 26.83, 26.77,26.33,27.41,26.25,26.14]
+"""
+ax.plot(x, y1, label = "Threshold tbm-50-20", linestyle=":")
+ax.plot(x, y2, label = "Threshold tbm-50-30", linestyle=":")
+ax.plot(x, y3, label = "Threshold tbm-60-20", linestyle=":")
+ax.plot(x, y4, label = "Threshold tbm-60-30", linestyle=":")
 
-#y_rl_3 = [90.80,90.80,90.80,90.80,90.80,90.80,90.80,90.80,26.83,26.77,26.33]
+ax.plot(x, y_rl, label = "RL", linestyle="-")
 
+ax.plot(x_b, y1_b, label = "Threshold tbm-50-20", linestyle=":")
+ax.plot(x_b, y2_b, label = "Threshold tbm-50-30", linestyle=":")
+ax.plot(x_b, y3_b, label = "Threshold tbm-60-20", linestyle=":")
+ax.plot(x_b, y4_b, label = "Threshold tbm-60-30", linestyle=":")
 
+ax.plot(x_b, y_rl_b, label = "RL", linestyle="-")
+"""
+ax.plot(x_c, y1_c, label = "Threshold tbm-50-20", linestyle=":")
+ax.plot(x_c, y2_c, label = "Threshold tbm-50-30", linestyle=":")
+ax.plot(x_c, y3_c, label = "Threshold tbm-60-20", linestyle=":")
+ax.plot(x_c, y4_c, label = "Threshold tbm-60-30", linestyle=":")
 
-# plot lines
-
-ax.plot(x, y2, label = "Threshold 1", linestyle=":")
-ax.plot(x, y3, label = "Threshold 2", linestyle=":")
-ax.plot(x, y4, label = "Threshold 3", linestyle=":")
-
-#ax.plot(x, y_rl, label = "RL", linestyle="-")
-
-ax.plot(x, y_rl_2, label = "RL Formulation A", linestyle="-")
-
-ax.plot(x, y_rl_3, label = "RL Formulation B", linestyle="-")
-
-
-
+ax.plot(x_c, y_rl_c, label = "RL", linestyle="-")
 
 plt.legend()
 plt.show()
 
-
 fig.savefig("test.png")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 from random import *
 list_rand=[]
 for ind in range(4000):
-    list_rand.append(randint(15, 20))
+    list_rand.append(randint(15, 600-15))
 
 print (list_rand)
 
