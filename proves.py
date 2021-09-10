@@ -16,10 +16,10 @@ a[0][12][13][0] = +1 # aixo és l'accio per quan estem a l'estat 1 jvb, 12 users
 print(a[1][40][20][20])
 
 
-number= 36
-number_decimal = float(number)/5
+number= 39
+number_decimal = float(number)/10
 number_rounded = round(number_decimal)
-number_final = int(number_rounded*5)
+number_final = int(number_rounded*10)
 print(number_final)
 
 
@@ -32,7 +32,7 @@ print(number_final)
 
 
 
-
+"""
 # importing package
 import matplotlib.pyplot as plt
 import numpy as np
@@ -68,21 +68,6 @@ y_rl_b = [48.71,44.77,36.07,31.63,31.42]
 
 y_rl_c = [801.59,765.42,763.36,762.36]
 
-"""
-ax.plot(x, y1, label = "Threshold tbm-50-20", linestyle=":")
-ax.plot(x, y2, label = "Threshold tbm-50-30", linestyle=":")
-ax.plot(x, y3, label = "Threshold tbm-60-20", linestyle=":")
-ax.plot(x, y4, label = "Threshold tbm-60-30", linestyle=":")
-
-ax.plot(x, y_rl, label = "RL", linestyle="-")
-
-ax.plot(x_b, y1_b, label = "Threshold tbm-50-20", linestyle=":")
-ax.plot(x_b, y2_b, label = "Threshold tbm-50-30", linestyle=":")
-ax.plot(x_b, y3_b, label = "Threshold tbm-60-20", linestyle=":")
-ax.plot(x_b, y4_b, label = "Threshold tbm-60-30", linestyle=":")
-
-ax.plot(x_b, y_rl_b, label = "RL", linestyle="-")
-"""
 ax.plot(x_c, y1_c, label = "Threshold tbm-50-20", linestyle=":")
 ax.plot(x_c, y2_c, label = "Threshold tbm-50-30", linestyle=":")
 ax.plot(x_c, y3_c, label = "Threshold tbm-60-20", linestyle=":")
@@ -95,7 +80,7 @@ plt.show()
 
 fig.savefig("test.png")
 
-
+"""
 
 
 
@@ -115,10 +100,15 @@ fig.savefig("test.png")
 
 from random import *
 list_rand=[]
-for ind in range(4000):
-    list_rand.append(randint(15, 600-15))
+for ind in range(150):
+    list_rand.append(randint(15, 3600-15))
+
+for ind in range(150):
+    list_rand.append(randint(15, 115))
+
 
 print (list_rand)
+
 
 
 
