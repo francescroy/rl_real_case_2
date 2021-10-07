@@ -1,5 +1,5 @@
-# Toy problem modeled as a Markov decision process (MDP)
+# Video-conference platform simulator and Reinforcement learning auto-scaler
 
-The idea in this project is to model a toy problem as a MDP 
-and find the best policy under two scenarios: if we now the dynamics (model-based MDP) or if 
-we don't (model-free MDP)
+This repository is a implementation of a sideo-conference platform simulator and the development of a reinforcemt learning algorithm to scale it.
+
+Francesc Roy Camdperrós
